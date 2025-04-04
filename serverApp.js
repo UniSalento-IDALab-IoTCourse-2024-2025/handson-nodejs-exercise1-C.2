@@ -51,7 +51,34 @@ app.post("/temperature", (req, res, next) => {
 
 });
 
-app.get('/dashboard', (req, res) => {
-    res.send('Hello World!');
+//asynchronous method to be executed to write info in the DB
+async function getLastTemperatureFromDB() {
+    // Use connect method to connect to the server
+    await client.connect();
+    console.log('Connected successfully to server');
+    const db = client.db(dbName);
+    const collection = db.collection('TemperatureDB');
+    const query = { timestamp: {$gt: 0}};
+    const options = {
+        // sort matched documents in descending order by timestamp
+        sort: { timestamp: -1 },
+    };
+
+    //get all the documents that respect the query
+    const filteredDocs = await collection.find(query, options).toArray();
+    //get the first document that respect the query
+    const filteredDoc = await collection.findOne(query, options);
+    console.log('Found documents filtered by timestamp: {$gt: 0} =>', filteredDoc);
+
+    return JSON.parse(JSON.stringify(filteredDoc));
+}
+
+
+app.get('/dashboard', async (req, res) => {
+
+    let finalTemp = await getLastTemperatureFromDB()
+    res.send('Temperature: ' + finalTemp.value)
+    //res.json(finalTemp.value)
 })
+
 
